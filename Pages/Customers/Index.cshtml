@@ -1,0 +1,42 @@
+﻿@page
+@model Visitas.Pages.Customers.IndexModel
+@{
+    ViewData["Title"] = "Customers";
+}
+
+<h1>@ViewData["Title"]</h1>
+
+<div id="customers_grid" style="width:50%; height: 400px"></div>
+
+@section Scripts{
+    <script>
+        const customersURL = "http://localhost:5000/api/customers";
+        var grid;
+        document.addEventListener('DOMContentLoaded', () => {
+            buildGrid();
+
+            // Fetch data asyncronously
+            dhx.ajax.post(customersURL, function(text) {
+                const customers = JSON.parse(text.xmlDoc.response);
+                populateCustomersGrid(customers);
+            });
+        });
+
+        function buildGrid() {
+            grid = new dhtmlXGridObject('customers_grid');
+            grid.setImagePath('/Dhtmlx/skins/web/imgs/dhxgrid_web/');
+            grid.setHeader('ID, Name, Address');
+            grid.setInitWidths('80, 150, *');
+            grid.setColTypes('ro,ro,ro');
+            grid.setColSorting('int, str, str');
+
+            grid.init();
+        }
+
+        function populateCustomersGrid(customers) {
+            customers.forEach(customer => {
+                grid.addRow(customer.id, [customer.id, customer.name, customer.address]);
+            });
+        }
+    </script>
+}

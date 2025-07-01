@@ -1,0 +1,139 @@
+﻿@page
+@model IndexModel
+@{
+    ViewData["Title"] = "Visits";
+}
+
+<div id="visits_grid" style="width:50%; height:400px"></div>
+
+<form id="visitForm">
+    <label>
+        Employee ID:
+        <input type="number" id="employeeID" required>
+    </label><br><br>
+
+    <label>
+        Customer ID:
+        <input type="number" id="customerID" required>
+    </label><br><br>
+
+    <label>
+        Visit Date:
+        <input type="datetime-local" id="visitDate" required>
+    </label><br><br>
+
+    <button type="submit">Submit</button>
+</form>
+
+@section Scripts{
+    <script>
+        var grid;
+        const visitsURL = "http://localhost:5000/api/visits";
+        const employeesURL = "http://localhost:5000/api/employees";
+        const customersURL = "http://localhost:5000/api/customers";
+        document.addEventListener('DOMContentLoaded', () => {
+            buildGrid();
+
+            dhx.ajax.post(`${visitsURL}/all`, function(text) {
+                console.log(text);
+                const visits = JSON.parse(text.xmlDoc.response);
+                populateVisitsGrid(visits);
+            });
+        });
+
+        function buildGrid() {
+            grid = new dhtmlXGridObject('visits_grid');
+            grid.setImagePath('/Dhtmlx/skins/web/imgs/dhxgrid_web/');
+            grid.setHeader('ID, CustomerID, EmployeeID, Visit Date');
+            grid.setInitWidths('80, 150, 150, *');
+            grid.setColTypes('ro,ro,ro,ro');
+            grid.setColSorting('int, str, str, str');
+
+            grid.init();
+        }
+
+        async function populateVisitsGrid(visits) {
+            for (const visit of visits) {
+                try {
+                    const employee = await findEmployeeById(visit.employeeID);
+                    const customer = await findCustomerById(visit.customerID);
+                    grid.addRow(visit.id, [
+                        visit.id,
+                        customer.name,
+                        employee.name,
+                        visit.visitDate
+                    ]);
+                } catch (error) {
+                    console.error("Error fetching employee:", error);
+                    grid.addRow(visit.id, [
+                        visit.id,
+                        visit.customerID,
+                        "Unknown",
+                        visit.visitDate
+                    ]);
+                }
+            }
+        }
+
+        async function findEmployeeById(id) {
+            return new Promise((resolve, reject) => {
+                dhx.ajax.post(`${employeesURL}/${id}`, function(text) {
+                    try {
+                        const employee = JSON.parse(text.xmlDoc.response);
+                        resolve(employee);
+                    } catch {
+                        reject("Failed to fetch user");
+                    }
+                });
+                
+            });
+        }
+
+        async function findCustomerById(id) {
+            return new Promise((resolve, reject) => {
+                dhx.ajax.post(`${customersURL}/${id}`, function(text) {
+                    try {
+                        const customer = JSON.parse(text.xmlDoc.response);
+                        resolve(customer);
+                    } catch {
+                        reject("Failed to fetch customer")
+                    }
+                });
+            });
+        }
+
+        document.getElementById("visitForm").addEventListener("submit", function (e) {
+            e.preventDefault();
+
+            const employeeID = parseInt(document.getElementById("employeeID").value);
+            const customerID = parseInt(document.getElementById("customerID").value);
+            const visitDate = document.getElementById("visitDate").value;
+
+            const visit = {
+            employeeID: employeeID,
+            customerID: customerID,
+            visitDate: visitDate
+            };
+
+            fetch(`${visitsURL}/create`, {
+                method: 'POST',
+                headers: {
+                'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(visit)
+            })
+            .then(response => {
+                if (!response.ok) throw new Error("Failed to create visit");
+                return response.text();
+            })
+            .then(data => {
+                alert("Visit created successfully!");
+                console.log(data);
+            })
+            .catch(error => {
+                console.error(error);
+                alert("Error creating visit");
+            });
+        });
+    </script>
+}

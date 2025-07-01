@@ -1,0 +1,43 @@
+﻿@page
+@model Visitas.Pages.Employees.IndexModel
+@{
+    ViewData["Title"] = "Employees";
+}
+
+<h1>@ViewData["Title"]</h1>
+
+<div id="employees_grid" style="width: 50%; height: 400px;"></div>
+
+@section Scripts{
+    <script>
+        const employeesURL = "http://localhost:5000/api/employees";
+        var grid;
+
+        document.addEventListener('DOMContentLoaded', () => {
+            buildGrid();
+
+            // Fetch data asyncronously
+            dhx.ajax.post(employeesURL, function(text) {
+                const employees = JSON.parse(text.xmlDoc.response);
+                populateEmployeesGrid(employees);
+            });
+        });
+
+        function buildGrid() {
+            grid = new dhtmlXGridObject('employees_grid');
+            grid.setImagePath('/Dhtmlx/skins/web/imgs/dhxgrid_web/');
+            grid.setHeader('ID, Name, Department');
+            grid.setInitWidths('80, 150, *');
+            grid.setColTypes('ro,ro,ro');
+            grid.setColSorting('int, str, str');
+
+            grid.init();
+        }
+
+        function populateEmployeesGrid(employees) {
+            employees.forEach(employee => {
+                grid.addRow(employee.id, [employee.id, employee.name, employee.department]);
+            });
+        }
+    </script>
+}
